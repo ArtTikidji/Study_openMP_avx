@@ -23,7 +23,7 @@ struct Vector_info {
     size_t size_N;
 };
 
-// colculation of vector's volumes consistently 
+// colculation of vector's values consistently 
 long double* calcul_n_parallel(struct Vector_info inp, long long *t0, long long *t1){
         long double* result = calloc(inp.size_N, sizeof(long double));
      long double a = inp.a;
@@ -42,6 +42,9 @@ long double* calcul_n_parallel(struct Vector_info inp, long long *t0, long long 
     
 }
 
+
+// calculate elements values parralel
+// creating result array for each thread
  long double* calcul(struct Vector_info inp, long long *t0, long long *t1){
      long double* result = calloc(inp.size_N, sizeof(long double));
      long double a = inp.a;
@@ -56,11 +59,6 @@ long double* calcul_n_parallel(struct Vector_info inp, long long *t0, long long 
     size_t arr_size = size_N/4;
      long double tmp_pow = pow(a, (long double)arr_size);
      long double seq_sum = (long double)(1 - tmp_pow)/(1 - a);
-    printf("\n-----debag-----\na = %Lf", a);
-    printf("\nb = %Lf\narr_size = %ld\n", b, arr_size);
-    printf("pow = %Lf\na = %Lf\n", tmp_pow, a);
-     printf("x0 = %Lf\n", inp.x0);
-    printf("rez = %Lf", seq_sum);
     a0 = (long double)x0;
     a1 = tmp_pow*a0 + b*seq_sum;
     a2 = tmp_pow*a1 + b*seq_sum;
@@ -70,11 +68,6 @@ long double* calcul_n_parallel(struct Vector_info inp, long long *t0, long long 
     arr[1] = a1;
     arr[2] = a2;
     arr[3] = a3;
-    
-    printf("\n a0, a1, a2, a3\n %Lf", a0);
-    printf(" %Lf", a1);
-    printf(" %Lf", a2);
-    printf(" %Lf\n", a3);
     
     long double rez_tmp[size_N];
     long double **mass_tmp = calloc(4, sizeof(int*));
@@ -98,20 +91,22 @@ long double* calcul_n_parallel(struct Vector_info inp, long long *t0, long long 
     return result;
 }
 
+
+// calculate elements values parralel
+// it dosen't create result array for each thread, and trying to work with critical section by changing pointer
  long double* calcul_v2(struct Vector_info inp, long long *t0, long long *t1){
-     long double* result = calloc(inp.size_N, sizeof(long double));
-     long double a = inp.a;
-     long double b = inp.b;
-     long double x0 = inp.x0;
-     size_t size_N = inp.size_N;
+    long double* result = calloc(inp.size_N, sizeof(long double));
+    long double a = inp.a;
+    long double b = inp.b;
+    long double x0 = inp.x0;
+    size_t size_N = inp.size_N;
     
-    //size_t rez[size_N];
     result[0] = x0;
     
-     long double a0, a1, a2, a3, arr[4];
+    long double a0, a1, a2, a3, arr[4];
     size_t arr_size = size_N/4;
-     long double tmp_pow = pow(a, (long double)arr_size);
-     long double seq_sum = (long double)(1 - tmp_pow)/(1 - a);
+    long double tmp_pow = pow(a, (long double)arr_size);
+    long double seq_sum = (long double)(1 - tmp_pow)/(1 - a);
     printf("\n-----debag-----\na = %Lf", a);
     printf("\nb = %Lf\narr_size = %ld\n", b, arr_size);
     printf("pow = %Lf\na = %Lf\n", tmp_pow, a);
