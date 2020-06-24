@@ -1,1 +1,1 @@
-# Study_openMP_avx
+# Study_openMP_AVX
