@@ -186,7 +186,7 @@ int main(int argc, const char * argv[]) {
 
     struct Result_by_blocks result = calcul(calc_inp, &t0, &t1);
     long double* result_n_p= calcul_n_parallel(calc_inp, &t0_np, &t1_np);
-    long double* result_v2= calcul_n_parallel(calc_inp, &tv20, &tv21);
+    long double* result_v2= calcul_v2(calc_inp, &tv20, &tv21);
 
     FILE *output;
     output = fopen("result.txt", "w");
