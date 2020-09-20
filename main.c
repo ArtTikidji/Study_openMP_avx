@@ -14,6 +14,7 @@
 #include <time.h>
 #include <math.h>
 #include <float.h>
+#include <pmmintrin.h>
 
 #define EPS 0.1
 
@@ -33,6 +34,7 @@ struct Result_by_blocks{
 float get_num_bloks_vec (struct Result_by_blocks vec_by_block, size_t iter){
   return vec_by_block.arr[iter/vec_by_block.block_size][iter%vec_by_block.block_size];
 }
+
 
 // colculation of vector's values consistently
 float* calcul_n_parallel(struct Vector_info inp, long long *t0, long long *t1){
@@ -69,6 +71,55 @@ float* calcul_n_parallel_v2(struct Vector_info inp, long long *t0, long long *t1
    for(int i = 1; i < size_N; ++i){
        tmp_xi = a*tmp_xi + b;
        result[i] = tmp_xi;
+   }
+    *t1 = clock();
+    return result;
+
+}
+
+// 
+float* calcul_n_parallel_with_AVX(struct Vector_info inp, long long *t0, long long *t1){
+    float* result = calloc(inp.size_N, sizeof(float));
+     float a = inp.a;
+     float b = inp.b;
+     float x0 = inp.x0;
+     size_t size_N = inp.size_N;
+
+    result[0] = x0;
+    result[1] = a*result[0] + b;
+    result[2] = a*result[1] + b;
+    result[3] = a*result[2] + b;
+    
+    float tmp_vec_a[4];
+    float tmp_vec_b[4];
+    
+    for(int i = 0; i < 4; ++i){
+        tmp_vec_a[i] = a;
+        tmp_vec_b[i] = b;
+    }
+    
+    __m128 a_vec = _mm_load_ps(&tmp_vec_a[0]);
+    __m128 b_vec = _mm_load_ps(&tmp_vec_b[0]);
+    
+    __m128 sum = _mm_load_ps(&tmp_vec_b[0]);
+    __m128 pow_a = _mm_mul_ps(a_vec, a_vec);
+    __m128 tmp1 = _mm_mul_ps(a_vec, b_vec);
+    __m128 tmp2 = sum;
+    sum = _mm_add_ps(sum, tmp1);
+    tmp1 = _mm_mul_ps(pow_a, a_vec); // a^3
+    pow_a = tmp1;
+    tmp1 = _mm_mul_ps(pow_a, b_vec);
+    tmp2 = sum;
+    sum = _mm_add_ps(tmp2, tmp1);
+    tmp2 = _mm_mul_ps(pow_a, a_vec);// a^4
+    pow_a = tmp2;
+    
+    *t0 = clock();
+   for(int i = 4; i < size_N; i+=4){
+       __m128 x_vec = _mm_load_ps(&result[i-4]);
+       __m128 tmp_vec = _mm_mul_ps(pow_a, x_vec);
+       x_vec = _mm_add_ps(tmp_vec, sum);
+       _mm_store_ps(&result[i],x_vec);
    }
     *t1 = clock();
     return result;
@@ -172,7 +223,7 @@ float* calcul_n_parallel_v2(struct Vector_info inp, long long *t0, long long *t1
 
 
 int main(int argc, const char * argv[]) {
-    long long t0, t1, t0_np, t1_np, tv20, tv21, t0_np_v2, t1_np_v2;
+    long long t0, t1, t0_np, t1_np, tv20, tv21, t0_np_v2, t1_np_v2, t0_np_AVX, t1_np_AVX;
       float a, b, x0;
     size_t size_N;
     FILE *finp;
@@ -194,11 +245,12 @@ int main(int argc, const char * argv[]) {
     float* result_n_p= calcul_n_parallel(calc_inp, &t0_np, &t1_np);
     float* result_v2= calcul_v2(calc_inp, &tv20, &tv21);
     float* result_n_p_v2= calcul_n_parallel_v2(calc_inp, &t0_np_v2, &t1_np_v2);
+    float* result_n_p_AVX= calcul_n_parallel_with_AVX(calc_inp, &t0_np_AVX, &t1_np_AVX);
     FILE *output;
     output = fopen("result.txt", "w");
     for(size_t i = 0; i < size_N; ++i){
-        fprintf(output, "%f", get_num_bloks_vec(result, i));
-        if (abs(result_n_p[i] - get_num_bloks_vec(result, i)) < EPS)
+        fprintf(output, "%f", result_n_p_AVX[i]);
+        if (abs(result_n_p[i] - result_n_p_AVX[i]) < EPS)
             fprintf(output, " Ok ");
         else
             fprintf(output, " Err ");
@@ -211,6 +263,8 @@ int main(int argc, const char * argv[]) {
     printf("\ntime = %lld\n", t1_np-t0_np);
     printf("\n==== Time of the not parralel method v2 ====\n");
     printf("\ntime = %lld\n", t1_np_v2-t0_np_v2);
+        printf("\n==== Time of the not parralel method with AVX ====\n");
+    printf("\ntime = %lld\n", t1_np_AVX-t0_np_AVX);
     printf("\n==== Time of the parralel method ====\n");
     printf("\ntime = %lld\n", t1-t0);
     printf("\n==== Time of the parralel method v2 ====\n");
